@@ -1,0 +1,16 @@
+h1{
+    color:blue;
+    font-size: 100px
+}
+
+img{
+    width: 500px;
+    height: 250px;
+}
+
+.btn{
+    padding: 10px;
+    background-color: blue;
+    color: white;
+    border-radius: 5px;
+}
