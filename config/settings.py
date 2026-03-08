@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "bookings.apps.BookingsConfig",
     "tailwind",
-    "theme"
+    "theme", 
+    "accounts.apps.AccountsConfig"
 ]
 
 MIDDLEWARE = [
