@@ -1,131 +1,122 @@
-# 🎟️ Django Online Ticket Booking Application
+# Django Online Ticket Booking
 
-### Epic Learn - Python Master Course  
-### Batch 01 - 2026  
+Online ticket booking web app built with Django as part of Epic Learn Python Master Course (Batch 01 - 2026).
 
-## 📌 Project Overview
+## Features
 
-This project is a Django-based Online Ticket Booking Application developed as part of the **Epic Learn Python Master Course (Batch 01 - 2026)**.
+- User registration, login, logout, and dashboard
+- Event listing and event detail pages
+- Venue page
+- Booking domain models for bookings and tickets
+- Django admin management
+- Tailwind CSS integration for UI styling
 
-## ✨ Features
+## Tech Stack
 
-- **User Authentication**: Secure user registration and login
-- **Event Management**: Browse and search available events
-- **Ticket Booking**: Book tickets for events with real-time availability
-- **Payment Integration**: Secure payment processing
-- **Order History**: View booking history and tickets
-- **Admin Dashboard**: Manage events, users, and bookings
+- Python 3.12+
+- Django 6.0.2
+- PostgreSQL (via `psycopg`)
+- Tailwind (`django-tailwind` app integration)
 
-## 🛠️ Tech Stack
+## Project Apps
 
-- **Backend**: Django 6.x+
-- **Database**: PostgreSQL
-- **Python**: 3.12+
-- **Additional Libraries**: Listed in `requirements.txt`
+- `bookings` - home, event/venue pages, booking-related models
+- `accounts` - auth flows and dashboard
+- `theme` - Tailwind theme app
+- `config` - project settings and URL routing
 
-## 📋 Requirements
+## Setup
 
-Install dependencies from `requirements.txt`:
+### 1. Create and activate a virtual environment
+
+Windows (PowerShell):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+Windows (CMD):
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+macOS/Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 🚀 Setup Instructions
+### 3. Configure environment variables
 
-### 1. Create Virtual Environment
-```bash
-python -m venv venv
+Create a `.env` file in the project root:
+
+```env
+DB_NAME=your_database_name
+DB_USER=your_database_user
+DB_PASSWORD=your_database_password
+DB_HOST=localhost
+DB_PORT=5432
 ```
 
-### 2. Activate Virtual Environment
+### 4. Run migrations
 
-**Windows:**
-```bash
-venv\Scripts\activate
- source venv/Scripts/activate
-```
-
-**macOS/Linux:**
-```bash
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Run Migrations
 ```bash
 python manage.py migrate
 ```
 
-### 5. Create Superuser (Admin)
+### 5. Create an admin user
+
 ```bash
 python manage.py createsuperuser
 ```
 
-### 6. Run Development Server
+## Run the Project
+
+Start Django server:
+
 ```bash
 python manage.py runserver
 ```
 
-Access the application at `http://localhost:8000`
+Optional: run Tailwind watcher in a second terminal:
 
-## 📁 Project Structure
-
-```
-online-ticket-booking/
-├── manage.py                 # Django management script
-├── requirements.txt          # Project dependencies
-├── README.md                 # Project documentation
-├── config/                   # Project configuration
-│   ├── settings.py          # Django settings
-│   ├── urls.py              # URL routing
-│   ├── wsgi.py              # WSGI configuration
-│   └── asgi.py              # ASGI configuration
-└── bookings/                 # Main application
-    ├── models.py            # Database models
-    ├── views.py             # Application views
-    ├── admin.py             # Admin interface
-    ├── urls.py              # App URL patterns
-    ├── forms.py             # Django forms
-    └── templates/           # HTML templates
+```bash
+python manage.py tailwind start
 ```
 
-## 🔒 Admin Panel
+Open:
 
-Access the Django admin panel at `http://localhost:8000/admin/`
+- `http://127.0.0.1:8000/`
+- `http://127.0.0.1:8000/admin/`
 
-Use the superuser credentials created during setup.
+## Main Routes
 
-## 📝 API Endpoints
+- `/` - home page
+- `/venue` - venue page
+- `/events/` - event list
+- `/events/<uuid:event_id>/` - event details
+- `/accounts/login/` - login
+- `/accounts/register/` - register
+- `/accounts/logout/` - logout
+- `/accounts/dashboard/` - user dashboard
 
-- `GET /` - Home page
-- `GET /bookings/` - View all events
-- `POST /bookings/book/` - Book a ticket
-- `GET /bookings/history/` - View booking history
+## Tests
 
-## 🧪 Testing
-
-Run tests with:
 ```bash
 python manage.py test
 ```
 
-## 📚 Learning Outcomes
+## Notes
 
-Through this project, you'll learn:
-
-- Django project structure and configuration
-- Database models and migrations
-- Views and URL routing
-- Template rendering
-- Authentication and authorization
-- Form handling
-- Admin interface customization
-- Best practices for Django development
----
-
-**Happy Coding! 🚀**
+- Database engine is configured for PostgreSQL in project settings.
+- Static files are served from the `static/` directory during development.
