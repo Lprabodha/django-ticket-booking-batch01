@@ -1,2 +1,8 @@
 .env
 venv
+__pycache__/
+*.py[cod]
+accounts/__pycache__/
+booking/__pycache__/
+config/__pycache__/
+events
