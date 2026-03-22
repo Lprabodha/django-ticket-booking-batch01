@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-
+from bookings.models import Booking, Event
 
 # Create your views here.
 
@@ -49,4 +49,12 @@ def logout_view(request):
 
 @login_required
 def dashboard_view(request):
-    return render(request, "accounts/dashboard.html")
+    
+    bookings = Booking.objects.filter(user=request.user).select_related("event", "event__venue").prefetch_related("tickets").order_by("-id")
+    
+    total_tickets = sum(b.quantity for b in bookings)
+    
+    return render(request, "accounts/dashboard.html", {
+        "bookings" : bookings,
+        "total_tickets" : total_tickets
+    })
