@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %} Dashboard {% endblock%}
+{% block title %}Dashboard{% endblock %}
 
 {% block content %}
-
 <div class="min-h-screen bg-slate-50">
+
+    <!-- Header bar -->
     <div class="bg-white border-b border-slate-200">
         <div class="mx-auto max-w-4xl px-4 py-6 sm:px-6 lg:px-8 flex items-center justify-between">
             <div>
@@ -21,36 +22,35 @@
         </div>
     </div>
 
+    <!-- Content -->
     <div class="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
 
+        <!-- Stats row -->
         <div class="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div class="rounded-xl bg-white border border-slate-200 px-5 py-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Total Bookings</p>
-                <p class="mt-1 text-3xl font-bold text-slate-900">{{bookings|length}}</p>
-
+                <p class="mt-1 text-3xl font-bold text-slate-900">{{ bookings|length }}</p>
             </div>
-
             <div class="rounded-xl bg-white border border-slate-200 px-5 py-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Total Tickets</p>
-                <p class="mt-1 text-3xl font-bold text-slate-900">{{total_tickets}}</p>
+                <p class="mt-1 text-3xl font-bold text-slate-900">{{ total_tickets }}</p>
             </div>
-
             <div class="col-span-2 sm:col-span-1 rounded-xl bg-blue-600 px-5 py-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-blue-200">Member Since</p>
                 <p class="mt-1 text-lg font-bold text-white">{{ request.user.date_joined|date:"M Y" }}</p>
             </div>
         </div>
 
+        <!-- Bookings -->
         <h2 class="mb-4 text-lg font-bold text-slate-900">My Bookings</h2>
 
         {% if bookings %}
-
         <div class="space-y-3">
             {% for booking in bookings %}
-
             <div class="rounded-xl bg-white border border-slate-200 overflow-hidden">
-                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
 
+                <!-- Booking header -->
+                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
                     <div class="flex flex-wrap items-center gap-3 min-w-0">
                         <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -58,42 +58,51 @@
                             </svg>
                         </div>
                         <div class="min-w-0">
-                            <p class="truncate font-semibold text-slate-900">{{booking.event.title}}</p>
-                            <p class="text-xs text-slate-400">{{ booking.event.event_date}}  -  {{booking.event.event_time}}</p>
+                            <p class="truncate font-semibold text-slate-900">{{ booking.event.title }}</p>
+                            <p class="text-xs text-slate-400">{{ booking.event.event_date }} &middot; {{ booking.event.event_time }}</p>
                         </div>
                     </div>
-
                     <div class="flex items-center gap-3">
-
                         {% if booking.status == "Confirmed" %}
-                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Confirmed</span>
-                        {% elif  booking.status == "Cancelled" %}
-                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-red-700">Cancelled</span>
+                        <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Confirmed</span>
+                        {% elif booking.status == "Cancelled" %}
+                        <span class="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-600">Cancelled</span>
                         {% else %}
-                            <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-amber-700">Pending</span>
+                        <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">Pending</span>
                         {% endif %}
-
+                        <span class="hidden text-xs text-slate-400 sm:block">Ref: {{ booking.booking_reference }}</span>
+                        {% if booking.id in cancellable_booking_ids %}
+                        <form action="{% url 'cancel_booking' booking.id %}" method="post">
+                            {% csrf_token %}
+                            <button
+                                type="submit"
+                                class="rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50"
+                                onclick="return confirm('Cancel this booking?');"
+                            >
+                                Cancel Ticket
+                            </button>
+                        </form>
+                        {% endif %}
                     </div>
-                
                 </div>
 
+                <!-- Booking details -->
                 <div class="border-t border-slate-100 grid grid-cols-2 divide-x divide-slate-100 sm:grid-cols-4">
-
                     <div class="px-5 py-3">
                         <p class="text-xs text-slate-400">Venue</p>
-                        <p class="mt-0.5 text-sm font-semibold text-slate-700">{{booking.event.venue.name|default:"--"}}</p>
+                        <p class="mt-0.5 text-sm font-semibold text-slate-700">{{ booking.event.venue.name|default:"—" }}</p>
                     </div>
                     <div class="px-5 py-3">
                         <p class="text-xs text-slate-400">Tickets</p>
-                        <p class="mt-0.5 text-sm font-semibold text-slate-700">{{booking.quantity}}</p>
+                        <p class="mt-0.5 text-sm font-semibold text-slate-700">{{ booking.quantity }}</p>
                     </div>
                     <div class="px-5 py-3">
                         <p class="text-xs text-slate-400">Total Paid</p>
-                        <p class="mt-0.5 text-sm font-semibold text-slate-700">LKR {{booking.total_price}}</p>
+                        <p class="mt-0.5 text-sm font-semibold text-slate-700">LKR {{ booking.total_price }}</p>
                     </div>
                     <div class="px-5 py-3">
-                        <p class="text-xs text-slate-400">Tickets</p>
-                        <p class="mt-0.5 text-sm font-semibold text-slate-700">{{booking.quantity}}</p>
+                        <p class="text-xs text-slate-400">Reference</p>
+                        <p class="mt-0.5 text-sm font-semibold text-slate-700">{{ booking.booking_reference }}</p>
                     </div>
                 </div>
 
@@ -110,30 +119,22 @@
                 {% endif %}
 
             </div>
-
             {% endfor %}
         </div>
 
         {% else %}
-
         <div class="rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center">
-
             <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/>
                 </svg>
             </div>
-
-            <p class="text-sm font-semibold text-slate-500">No Booking yet.</p>
+            <p class="text-sm font-semibold text-slate-500">No bookings yet</p>
             <p class="mt-1 text-sm text-slate-400">Find an event and book your first ticket.</p>
-            <a href="{% url 'event_list' %}"  class="mt-4 inline-block rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700">Browse Events</a>
-
+            <a href="{% url 'event_list' %}" class="mt-4 inline-block rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700">Browse Events</a>
         </div>
-
         {% endif %}
 
-    <div>
-<div>
-
-
-{% endblock %} 
+    </div>
+</div>
+{% endblock %}

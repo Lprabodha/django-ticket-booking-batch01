@@ -1,10 +1,20 @@
+import uuid
+import logging
+
 from django.shortcuts import render
 from .models import Event, Booking, Ticket
 from django.shortcuts import  get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-import uuid
 from django.contrib import messages
+from django.urls import reverse
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
 
 # Create your views here.
 def home_view(request):
@@ -101,6 +111,8 @@ def book_event_view(request, event_id):
             for _ in range(quantity)
         ])
         
+        transaction.on_commit(lambda: _send_booking_confirmation_email(request, booking))
+        
         event.available_tickets -= quantity
         event.save(update_fields=["available_tickets"])
         
@@ -109,3 +121,44 @@ def book_event_view(request, event_id):
     )
     
     return redirect("dashboard")
+
+
+def _send_booking_confirmation_email(request, booking):
+    if not booking.user.email:
+        messages.warning(request, "Booking confirmed, but no email was sent because your account has no email address.")
+        return
+
+    user_display_name = booking.user.get_full_name() or booking.user.username
+    event = booking.event
+    dashboard_url = request.build_absolute_uri(reverse("dashboard"))
+
+    subject = f"Booking Confirmation - {event.title}"
+    context = {
+        "user_display_name": user_display_name,
+        "event": event,
+        "booking": booking,
+        "dashboard_url": dashboard_url,
+    }
+
+    html_message = render_to_string("booking/emails/booking_confirmation.html", context)
+    text_message = strip_tags(html_message)
+
+    email = EmailMultiAlternatives(
+        subject=subject,
+        body=text_message,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[booking.user.email],
+    )
+    email.attach_alternative(html_message, "text/html")
+    try:
+        email.send(fail_silently=False)
+    except Exception:
+        logger.exception(
+            "Failed to send booking confirmation email",
+            extra={"booking_id": booking.id, "event_id": event.id, "user_id": booking.user.id},
+        )
+        messages.warning(
+            request,
+            "Booking confirmed, but confirmation email could not be sent. Please contact support.",
+        )
+    
