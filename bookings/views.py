@@ -1,5 +1,7 @@
 import uuid
 import logging
+import json
+import requests
 
 from django.shortcuts import render
 from .models import Event, Booking, Ticket
@@ -12,6 +14,9 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.http import JsonResponse
 
 logger = logging.getLogger(__name__)
 
@@ -162,3 +167,130 @@ def _send_booking_confirmation_email(request, booking):
             "Booking confirmed, but confirmation email could not be sent. Please contact support.",
         )
     
+    
+@ensure_csrf_cookie
+def assistant_view(request):
+    return render(request, "booking/assistant.html")
+
+@require_POST
+def ai_chat(request):
+    try:
+        body = json.loads(request.body.decode() or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"reply": "Could not read your message. Try again."})
+
+    user_message = body.get("message", "")
+    if not isinstance(user_message, str):
+        user_message = str(user_message)
+    user_message = user_message.strip()
+    if not user_message:
+        return JsonResponse({"reply": "Please type a message first."})
+
+    intent_reply = _basic_intent_reply(user_message)
+    if intent_reply is not None:
+        return JsonResponse({"reply": intent_reply})
+
+    if not settings.HF_API_TOKEN:
+        return JsonResponse({"reply": "Add HF_API_TOKEN to your .env file (Hugging Face token)."})
+
+    lines = []
+    for event in Event.objects.filter(is_published=True).select_related("venue")[:25]:
+        v = event.venue
+        lines.append(
+            f"{event.title} | {event.event_date} {event.event_time} | {v.name}, {v.city} | "
+            f"${event.price} | {event.available_tickets} tickets left | id: {event.id}"
+        )
+    catalog = "\n".join(lines) if lines else "(no published events yet)"
+
+    system_prompt = (
+        "You are a helpful ticket booking assistant for StarEvents. "
+        "Use only the events list below for facts. Do not invent events.\n\n"
+        "How to format every reply (important):\n"
+        "- Use line breaks so text is easy to scan; never one huge paragraph.\n"
+        "- For multiple events: put a blank line between each event.\n"
+        "- For each event use this shape (plain text, you may use **Title** for the name):\n"
+        "  **Event name**\n"
+        "  - Date & time: ...\n"
+        "  - Venue: ...\n"
+        "  - Price: ...\n"
+        "  - Tickets left: ...\n"
+        "- Do not use emoji.\n\n"
+        "Events:\n"
+        f"{catalog}"
+    )
+
+    payload = {
+        "model": settings.HF_CHAT_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.HF_API_TOKEN}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        response = requests.post(settings.HF_CHAT_URL, headers=headers, json=payload, timeout=90)
+        result = response.json()
+        reply = result.get("choices", [{}])[0].get("message", {}).get("content")
+        # reply = result["choices"][0]["message"]["content"]
+    except Exception as ex:
+        logger.exception(ex)
+        reply = "Sorry, something went wrong."
+
+    return JsonResponse({"reply": reply})
+
+
+def _basic_intent_reply(message: str):
+    """Simple rule-based replies for hello / goodbye (no AI call)."""
+    m = message.lower().strip().rstrip("!.?")
+    if not m:
+        return None
+
+    # Goodbye
+    bye_exact = {
+        "bye",
+        "goodbye",
+        "see you",
+        "see ya",
+        "see you later",
+        "bye bye",
+        "cya",
+        "farewell",
+    }
+    words = m.split()
+    if m in bye_exact or (len(words) <= 4 and (words[0] == "bye" or words[-1] == "bye")):
+        return (
+            "Goodbye! Thanks for using StarEvents. "
+            "Come back anytime to browse events or book tickets."
+        )
+
+    hi_exact = {
+        "hi",
+        "hello",
+        "hey",
+        "hiya",
+        "yo",
+        "sup",
+        "howdy",
+        "good morning",
+        "good afternoon",
+        "good evening",
+    }
+    if m in hi_exact:
+        return (
+            "Hi! I'm here to help with StarEvents.\n\n"
+            "You can ask about upcoming events, venues, prices, or how booking works. "
+            "What would you like to know?"
+        )
+    if m.startswith("hello") and len(m) <= 35 and "event" not in m and "ticket" not in m:
+        parts = m.split()
+        if len(parts) <= 5:
+            return (
+                "Hello! I'm the StarEvents ticket assistant.\n\n"
+                "Ask me about shows, dates, or tickets — for example: “What events do you have?”"
+            )
+
+    return None
